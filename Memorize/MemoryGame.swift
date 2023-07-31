@@ -11,29 +11,8 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
     private(set) var cards: [Card]
     
     private var indexOfTheOneAndOnlyFaceUpCard: Int? {
-        get {
-            var faceUpCardIndices = [Int]()
-            for index in cards.indices {
-                if cards[index].isFaceUP {
-                    faceUpCardIndices.append(index)
-                }
-            }
-            
-            if faceUpCardIndices.count == 1 {
-                return faceUpCardIndices.first
-            } else {
-                return nil
-            }
-        }
-        set {
-            for index in cards.indices {
-                if index != newValue {
-                    cards[index].isFaceUP = false
-                } else {
-                    cards[index].isFaceUP = true
-                }
-            }
-        }
+        get { cards.indices.filter ({ cards[$0].isFaceUP }).oneAndOnly }
+        set { cards.indices.forEach { cards[$0].isFaceUP = ($0 == newValue) } }
     }
     
     mutating func choose(_ card: Card) {
@@ -70,5 +49,15 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
         var isMatched = false
         let content: CardContent
         let id: Int
+    }
+}
+
+extension Array {
+    var oneAndOnly: Element? {
+        if count == 1 {
+            return first
+        } else {
+            return nil
+        }
     }
 }
