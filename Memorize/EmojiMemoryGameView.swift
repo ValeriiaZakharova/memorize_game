@@ -23,7 +23,7 @@ struct EmojiMemoryGameView: View {
                     }
             }
         }
-        .foregroundColor(.purple)
+        .foregroundColor(.green)
         .padding(.horizontal)
         
         Spacer(minLength: 30)
@@ -45,6 +45,9 @@ struct Cardview: View {
                     shape.fill().foregroundColor(.white)
                     shape.strokeBorder(lineWidth: DrawingConstants.lineWidth)
                     Text(card.content).font(font(in: geometry.size))
+                    Pie(startAngle: Angle(degrees: 0-90), endAngle: Angle(degrees: 110-90))
+                        .padding(DrawingConstants.circlePadding)
+                        .opacity(DrawingConstants.circleOpacity)
                 } else if card.isMatched {
                     shape.opacity(0)
                 } else {
@@ -60,17 +63,20 @@ struct Cardview: View {
       
     private struct DrawingConstants {
         static let cornerRadius: CGFloat = 15
-        static let lineWidth: CGFloat = 3
-        static let fontScale: CGFloat = 0.75
+        static let lineWidth: CGFloat = 2
+        static let fontScale: CGFloat = 0.7
+        static let circlePadding: CGFloat = 5
+        static let circleOpacity: CGFloat = 0.5
     }
 }
 
 struct EmojiMemoryGameView_Previews: PreviewProvider {
     static var previews: some View {
         let game = EmojiMemoryGame()
-        EmojiMemoryGameView(game: game)
-            .preferredColorScheme(.dark)
-        EmojiMemoryGameView(game: game)
-            .preferredColorScheme(.light)
+        game.choose(game.cards.first!)
+        return EmojiMemoryGameView(game: game)
+//            .preferredColorScheme(.dark)
+//        EmojiMemoryGameView(game: game)
+//            .preferredColorScheme(.light)
     }
 }
