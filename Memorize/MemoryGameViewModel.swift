@@ -7,12 +7,12 @@
 
 import UIKit
 
-struct MemoryGame<CardContent> where CardContent: Equatable {
+struct MemoryGameViewModel<CardContent> where CardContent: Equatable {
     private(set) var cards: [Card]
     
     private var indexOfTheOneAndOnlyFaceUpCard: Int? {
-        get { cards.indices.filter ({ cards[$0].isFaceUP }).oneAndOnly }
-        set { cards.indices.forEach { cards[$0].isFaceUP = ($0 == newValue) } }
+        get { cards.indices.filter ({ cards[$0].isFaceUP }).only }
+        set { cards.indices.forEach { cards[$0].isFaceUP = (newValue == $0) } }
     }
     
     mutating func choose(_ card: Card) {
@@ -29,9 +29,11 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
             } else {
                 indexOfTheOneAndOnlyFaceUpCard = chosenIndex
             }
-            
-            cards[chosenIndex].isFaceUP.toggle()
         }
+    }
+    
+    mutating func shuffle() {
+        cards.shuffle()
     }
 
     init(numberOfPairsOfCards: Int, createCardContent: (Int) -> CardContent) {
@@ -44,7 +46,11 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
         }
     }
     
-    struct Card: Identifiable {
+    struct Card: Identifiable, CustomDebugStringConvertible {
+        var debugDescription: String {
+            "\(id): \(content) \(isFaceUP ? "up": "down") \(isMatched ? "matched" : "notMtched")"
+        }
+        
         var isFaceUP = false
         var isMatched = false
         let content: CardContent
@@ -53,11 +59,7 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
 }
 
 extension Array {
-    var oneAndOnly: Element? {
-        if count == 1 {
-            return first
-        } else {
-            return nil
-        }
+    var only: Element? {
+        count == 1 ? first : nil
     }
 }
