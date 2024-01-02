@@ -10,31 +10,121 @@ import SwiftUI
 struct EmojiMemoryGameView: View {
     @ObservedObject var game: EmojiMemoryGame
     
+    @State private var dealt = Set<Int>()
+    
+    @Namespace private var dealingNamespace
+    
     var body: some View {
+        ZStack(alignment: .bottom) {
+            VStack {
+                gameBody
+                HStack {
+                    restart
+                    Spacer()
+                    shuffle
+                }
+                .padding(.horizontal)
+            }
+            deckBody
+        }
+        .padding()
+    }
+
+    var gameBody: some View {
         AspectVGrid(items: game.cards, aspectRatio: 2/3) { card in
-            if card.isMatched && !card.isFaceUP {
-                Rectangle().opacity(0)
+            if isUndealt(card) || card.isMatched && !card.isFaceUP {
+                Color.clear
             } else {
                 Cardview(card: card)
+                    .matchedGeometryEffect(id: card.id, in: dealingNamespace)
                     .padding(4)
                     .aspectRatio(2/3, contentMode: .fit)
+//                    .transition(.scale.animation(.easeInOut(duration: 0.7)))
+//                    .transition(.asymmetric(insertion: .scale, removal: .opacity).animation(.easeInOut(duration: 1)))
+                    .transition(.asymmetric(insertion: .identity, removal: .scale))
+                    .zIndex(zIndex(of: card))
                     .onTapGesture {
-                        game.choose(card)
+                        withAnimation {
+                            game.choose(card)
+                        }
                     }
             }
         }
-        .foregroundColor(.green)
-        .padding(.horizontal)
-        
-        Spacer(minLength: 30)
-        Button("Shuffle") {
-            game.shuffle()
+        .foregroundColor(CardConstans.color)
+    }
+    
+    var deckBody: some View {
+        ZStack {
+            ForEach(game.cards.filter(isUndealt)) { card in
+                Cardview(card: card)
+                    .matchedGeometryEffect(id: card.id, in: dealingNamespace)
+//                    .transition(.asymmetric(insertion: .opacity, removal: .scale))
+                    .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                    .zIndex(zIndex(of: card))
+            }
         }
+        .frame(width: CardConstans.undealtWidth, height: CardConstans.undealtHeight)
+        .foregroundColor(CardConstans.color)
+        .onTapGesture {
+            for card in game.cards {
+                withAnimation(dealAnimation(for: card)) {
+                    deal(card)
+                }
+            }
+        }
+    }
+    
+    var shuffle: some View {
+        Button("Shuffle") {
+            withAnimation {
+                game.shuffle()
+            }
+        }
+    }
+    
+    var restart: some View {
+        Button("Restart") {
+            withAnimation {
+                dealt = []
+                game.restart()
+            }
+        }
+    }
+    
+    private func zIndex(of card: EmojiMemoryGame.Card) -> Double {
+        -Double(game.cards.firstIndex(where: { $0.id == card.id }) ?? 0)
+    }
+    
+    private func deal(_ card: EmojiMemoryGame.Card) {
+        dealt.insert(card.id)
+    }
+    
+    private func isUndealt(_ card: EmojiMemoryGame.Card) -> Bool {
+        !dealt.contains(card.id)
+    }
+    
+    private func dealAnimation(for card: EmojiMemoryGame.Card) -> Animation {
+        var delay = 0.0
+        if let index = game.cards.firstIndex(where: { $0.id == card.id }) {
+            delay = Double(index) * (CardConstans.totalDuration / Double(game.cards.count))
+        }
+        return .easeInOut(duration: CardConstans.dealDuration).delay(delay)
+    }
+    
+    private struct CardConstans {
+        static let aspectRatio: CGFloat = 2/3
+        static let undealtHeight: CGFloat = 90
+        static let undealtWidth = undealtHeight * aspectRatio
+        static let color = Color.green
+        static let dealDuration = 0.5
+        static let totalDuration = 1.0
     }
 }
 
 struct Cardview: View {
     let card: EmojiMemoryGame.Card
+    
+    @State private var animatedBonusRemaining: Double = 0
     
     var body: some View {
         GeometryReader(content: { geometry in
@@ -44,7 +134,19 @@ struct Cardview: View {
                     .animation(.linear(duration: 1).repeatForever(autoreverses: false))
                     .font(Font.system(size: DrawingConstants.fontSize))
                     .scaleEffect(scale(thatFits: geometry.size))
-                Pie(startAngle: Angle(degrees: 0-90), endAngle: Angle(degrees: 110-90))
+                Group {
+                    if card.isConsumingBonusTime {
+                        Pie(startAngle: Angle(degrees: 0-90), endAngle: Angle(degrees: (1-animatedBonusRemaining)*360-90))
+                            .onAppear {
+                                animatedBonusRemaining = card.bonusRemaining
+                                withAnimation(.linear(duration: card.bonusTimeRemaining)) {
+                                    animatedBonusRemaining = 0
+                                }
+                            }
+                    } else {
+                        Pie(startAngle: Angle(degrees: 0-90), endAngle: Angle(degrees: (1-card.bonusRemaining)*360-90))
+                    }
+                }
                     .padding(DrawingConstants.circlePadding)
                     .opacity(DrawingConstants.circleOpacity)
             }
